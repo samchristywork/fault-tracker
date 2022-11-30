@@ -1,0 +1,7 @@
+appenders:
+  file:
+    kind: file
+    path: "fault_tracker.log"
+root:
+  appenders:
+    - file
