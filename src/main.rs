@@ -9,7 +9,7 @@ fn main() {
 
     info!("Hello, World!");
 
-    let files = vec!["data/a", "data/b"];
+    let files = vec!["data/a", "data/b", "data/c", "data/d"];
 
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
@@ -22,7 +22,7 @@ fn main() {
             .unwrap();
     }
 
-    let mut offsets: HashMap<String, usize> = HashMap::new();
+    let mut offsets: HashMap<String, u64> = HashMap::new();
 
     for res in rx {
         match res {
@@ -31,18 +31,23 @@ fn main() {
                     let path = path.to_str().unwrap();
                     let offset = match offsets.get(path) {
                         Some(offset) => *offset,
-                        None => 0 as usize,
+                        None => 0,
                     };
 
                     let file = File::open(path).unwrap();
                     let mut reader = BufReader::new(file);
-                    reader.seek(SeekFrom::Start(offset as u64)).unwrap();
+                    reader.seek(SeekFrom::Start(offset)).unwrap();
 
                     let mut s = String::new();
-                    let bytes = reader.read_to_string(&mut s).unwrap();
-                    offsets.insert(path.to_string(), offset + bytes);
+                    reader.read_to_string(&mut s).unwrap();
 
-                    println!("{:?}, {}, {}", path, offset, s)
+                    let initial = offset;
+                    let offset = reader.seek(SeekFrom::Current(0)).unwrap();
+                    offsets.insert(path.to_string(), offset);
+
+                    if initial != offset {
+                        println!("{}: {}", path.to_string(), s.strip_suffix("\n").unwrap());
+                    }
                 }
             }
             Err(e) => println!("Error: {:?}", e),
